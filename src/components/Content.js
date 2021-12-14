@@ -17,7 +17,7 @@ import { OrderSide } from "opensea-js/lib/types";
 function Content() {
   const [formData, setFormData] = React.useState({
     contractaddress: "0x60e4d786628fea6478f785a6d7e704777c86a7c6",
-    tockenid: "2127",
+    tokenid: "2127",
     offerprice1: 0,
     offerprice2: 0,
     offerprice3: 0,
@@ -72,24 +72,31 @@ function Content() {
     console.log(formData);
 
     const asset = await seaport.api.getAsset({
-      tokenAddress: "0x60e4d786628fea6478f785a6d7e704777c86a7c6",
-      tokenId: "2127",
+      tokenAddress: formData.contractaddress,
+      tokenId: formData.tokenid,
     });
 
     console.log(asset);
 
-    const { orders, count } = await seaport.api.getOrders({
-      asset_contract_address: "0x60e4d786628fea6478f785a6d7e704777c86a7c6",
-      token_id: "2127",
-      side: OrderSide.Buy,
-    });
-
-    console.log(orders);
     // const { orders, count } = await seaport.api.getOrders({
     //   asset_contract_address: formData.contractaddress,
-    //   token_id: formData.tockenid,
+    //   token_id: formData.tokenid,
     //   side: OrderSide.Buy,
     // });
+
+    // console.log(orders);
+
+    const offer = await seaport.createBuyOrder({
+      asset: {
+        tokenId: formData.tokenid,
+        tokenAddress: formData.contractaddress,
+      },
+      accountAddress,
+      // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+      startAmount: 0.0001,
+    });
+
+    console.log(offer);
   };
 
   return (
@@ -102,13 +109,15 @@ function Content() {
             aria-label="Contract Address"
             placeholder="Contract Address"
             name="contractaddress"
+            value={formData.contractaddress}
             onChange={onChange}
           />
           <InputGroup.Text>/</InputGroup.Text>
           <FormControl
             aria-label="Tocken ID"
             placeholder="Tocken ID"
-            name="tockenid"
+            name="tokenid"
+            value={formData.tokenid}
             onChange={onChange}
           />
         </InputGroup>
@@ -144,6 +153,7 @@ function Content() {
                 placeholder="My Offer Price 1"
                 min="0"
                 name="offerprice1"
+                value={formData.offerprice1}
                 onChange={onChange}
               />
               <InputGroup.Text>ETH</InputGroup.Text>
@@ -157,6 +167,7 @@ function Content() {
                 placeholder="Duration"
                 min="0"
                 name="duration1"
+                value={formData.duration1}
                 onChange={onChange}
               />
               <InputGroup.Text>hour</InputGroup.Text>
@@ -173,6 +184,7 @@ function Content() {
                 placeholder="My Offer Price 2"
                 min="0"
                 name="offerprice2"
+                value={formData.offerprice2}
                 onChange={onChange}
               />
               <InputGroup.Text>ETH</InputGroup.Text>
@@ -186,6 +198,7 @@ function Content() {
                 placeholder="Duration"
                 min="0"
                 name="duration2"
+                value={formData.duration2}
                 onChange={onChange}
               />
               <InputGroup.Text>hour</InputGroup.Text>
@@ -200,6 +213,7 @@ function Content() {
               <Form.Control
                 type="number"
                 placeholder="My Offer Price 3"
+                value={formData.offerprice3}
                 min="0"
                 name="offerprice3"
                 onChange={onChange}
@@ -215,6 +229,7 @@ function Content() {
                 placeholder="Duration"
                 min="0"
                 name="duration3"
+                value={formData.duration3}
                 onChange={onChange}
               />
               <InputGroup.Text>hour</InputGroup.Text>
