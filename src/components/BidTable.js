@@ -1,0 +1,393 @@
+import React from "react";
+
+//import Web3, OpenSea
+import * as Web3 from "web3";
+import { OpenSeaPort, Network } from "opensea-js";
+
+//import Component
+import {
+  Table,
+  Container,
+  Form,
+  FormControl,
+  InputGroup,
+  Row,
+  Col,
+  Button,
+  Image,
+  Badge,
+} from "react-bootstrap";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+//import CSS
+import "./BidTable.scss";
+
+class BidTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      seaport: "",
+      accountAddress: "",
+      contractAddress: "",
+      tokenId: "",
+      data: [
+        {
+          title: "",
+          listUrl: "",
+          nowPrice1st: 0,
+          nowPrice2nd: 0,
+          offeringPrice1st: 0,
+          offeringPrice2nd: 0,
+          offeringPrice3rd: 0,
+          formData: {
+            myofferprice1: 0,
+            duration1: 0,
+            myofferprice2: 0,
+            duration2: 0,
+            myofferprice3: 0,
+            duration3: 0,
+          },
+        },
+      ],
+    };
+  }
+
+  onHandleChange = (e, index) => {
+    let data = this.state.data;
+    let temp = data[index];
+    if (e.target.name === "listUrl") {
+      temp.listUrl = e.target.value;
+    } else {
+      temp.formData[e.target.name] = e.target.value;
+    }
+    data[index] = temp;
+    this.setState({ data: data });
+  };
+
+  onNewRow = () => {
+    //insert new row
+    let temp;
+    temp = this.state.data;
+    temp.push({
+      title: "",
+      listUrl: "",
+      nowPrice1st: 0,
+      nowPrice2nd: 0,
+      offeringPrice1st: 0,
+      offeringPrice2nd: 0,
+      offeringPrice3rd: 0,
+      formData: {
+        myofferprice1: 0,
+        duration1: 0,
+        myofferprice2: 0,
+        duration2: 0,
+        myofferprice3: 0,
+        duration3: 0,
+      },
+    });
+    this.setState({
+      data: temp,
+    });
+  };
+
+  onDeleteRow = (index) => {
+    if (this.state.data.length === 1) {
+      return;
+    }
+    let temp = this.state.data.filter((item, i) => i !== index);
+    this.setState({ data: temp });
+  };
+
+  setContractAddressTokenId = (listURL) => {
+    let URL = listURL.replace("https://opensea.io/assets/", "");
+    let URLArray = URL.split("/");
+    if (URLArray.length == 2) {
+      this.setState({ contractAddress: URLArray[0] });
+      this.setState({ tokenid: URLArray[1] });
+    } else {
+      this.setState({ contractAddress: "" });
+      this.setState({ tokenid: "" });
+    }
+  };
+
+  setTitle = (title, index) => {
+    let temp;
+    temp = this.state.data;
+    temp[index].title = title;
+    this.setState({
+      data: temp,
+    });
+  };
+
+  setBuyPrice = (sellOrders, index) => {
+    let temp;
+    temp = this.state.data;
+    temp[index].nowPrice1st = 0;
+    temp[index].nowPrice2nd = 0;
+
+    let offerPrices,
+      offerPricesArray = [];
+    offerPrices = sellOrders;
+
+    offerPrices.forEach((offerPrice) => {
+      let priceWETH = offerPrice.basePrice
+        .div(Math.pow(10, 18) * offerPrice.quantity.toNumber())
+        .toNumber();
+      offerPricesArray.push(priceWETH);
+    });
+
+    offerPricesArray.sort(function (a, b) {
+      return a - b;
+    });
+
+    offerPricesArray.forEach((offerPrice, i) => {
+      if (i == 0) temp[index].nowPrice1st = offerPrice;
+      if (i == 1) temp[index].nowPrice2nd = offerPrice;
+      if (i >= 2) return;
+    });
+
+    this.setState({
+      data: temp,
+    });
+  };
+
+  setOfferPrice = (buyOrders, index) => {
+    let temp;
+    temp = this.state.data;
+    temp[index].offeringPrice1st = 0;
+    temp[index].offeringPrice2nd = 0;
+    temp[index].offeringPrice3rd = 0;
+
+    let offerPrices,
+      offerPricesArray = [];
+    offerPrices = buyOrders;
+
+    offerPrices.forEach((offerPrice) => {
+      let priceWETH = offerPrice.basePrice
+        .div(Math.pow(10, 18) * offerPrice.quantity.toNumber())
+        .toNumber();
+      offerPricesArray.push(priceWETH);
+    });
+
+    offerPricesArray.sort(function (a, b) {
+      return b - a;
+    });
+
+    offerPricesArray.forEach((offerPrice, i) => {
+      if (i == 0) temp[index].offeringPrice1st = offerPrice;
+      if (i == 1) temp[index].offeringPrice2nd = offerPrice;
+      if (i == 2) temp[index].offeringPrice3rd = offerPrice;
+      if (i >= 3) return;
+    });
+
+    this.setState({
+      data: temp,
+    });
+  };
+
+  sendOffer = async (index) => {
+    try {
+      const offer = await this.state.seaport.createBuyOrder({
+        asset: {
+          tokenId: this.state.tokenid,
+          tokenAddress: this.state.contractAddress,
+        },
+        accountAddress: this.state.accountAddress,
+        // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+        startAmount: this.state.data[index].formData.myofferprice1,
+        expirationTime: Math.round(
+          Date.now() / 1000 +
+            60 * 60 * this.state.data[index].formData.duration1
+        ), // One day from now
+      });
+    } catch (err) {
+      toast.error(err.toString(), { theme: "dark" });
+    }
+  };
+
+  onSubmit = async (e, index) => {
+    e.preventDefault();
+    console.log(this.state.data[index]);
+
+    await this.setContractAddressTokenId(this.state.data[index].listUrl);
+
+    try {
+      const asset = await this.state.seaport.api.getAsset({
+        tokenAddress: this.state.contractAddress,
+        tokenId: this.state.tokenid,
+      });
+      console.log(asset);
+
+      await this.setTitle(asset.assetContract.name, index);
+      await this.setOfferPrice(asset.buyOrders, index);
+      await this.setBuyPrice(asset.sellOrders, index);
+      await this.sendOffer(index);
+    } catch (err) {
+      console.log(err);
+      toast.error("Check OpenSea Listing", { theme: "dark" });
+    }
+  };
+
+  connectWallet = () => {
+    let web3;
+    if (window.ethereum) {
+      window.ethereum.enable();
+      web3 = new Web3(window.ethereum);
+    } else {
+      toast.error(
+        "You need an Ethereum wallet to interact with this marketplace. Unlock your wallet, get MetaMask.io or Portis on desktop, or get Trust Wallet or Coinbase Wallet on mobile.",
+        { theme: "dark" }
+      );
+    }
+    web3.eth.getAccounts().then(async (addr) => {
+      this.setState({ accountAddress: addr[0] });
+    });
+  };
+
+  createSeaPort = () => {
+    const provider = new Web3.providers.HttpProvider(
+      "https://mainnet.infura.io"
+    );
+    const seaport = new OpenSeaPort(provider, {
+      networkName: Network.Main,
+      apiKey: "",
+    });
+
+    this.setState({ seaport: seaport });
+  };
+
+  componentDidMount() {
+    this.createSeaPort();
+    this.connectWallet();
+  }
+
+  render() {
+    return (
+      <Container>
+        <Table striped bordered hover variant="dark" className="Sheet-Table">
+          <thead>
+            <tr>
+              <th width="30%">OpenSea Listing</th>
+              <th>Title</th>
+              <th>Buy Price 1st</th>
+              <th>Buy Price 2nd</th>
+              <th>Offering Price 1st</th>
+              <th>Offering Price 2nd</th>
+              <th>Offering Price 3rd</th>
+              <th>My Offer Price 1st</th>
+              <th>Duration</th>
+              <th>My Offer Price 2nd</th>
+              <th>Duration</th>
+              <th>My Offer Price 3rd</th>
+              <th>Duration</th>
+              <th>Submit</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {this.state.data.map((item, index) => {
+              return (
+                <tr background-color="#2c3034" key={index}>
+                  <td word-break="all" width="30%">
+                    <Form.Control
+                      as="textarea"
+                      value={item.listUrl}
+                      rows={3}
+                      name="listUrl"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td width="10%">{item.title}</td>
+                  <td>{item.nowPrice1st}</td>
+                  <td>{item.nowPrice2nd}</td>
+                  <td>{item.offeringPrice1st}</td>
+                  <td>{item.offeringPrice2nd}</td>
+                  <td>{item.offeringPrice3rd}</td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.myofferprice1}
+                      name="myofferprice1"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.duration1}
+                      name="duration1"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.myofferprice2}
+                      name="myofferprice2"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.duration2}
+                      name="duration2"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.myofferprice3}
+                      name="myofferprice3"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Form.Control
+                      value={item.formData.duration3}
+                      name="duration3"
+                      onChange={(e) => this.onHandleChange(e, index)}
+                    />
+                  </td>
+                  <td>
+                    <Button onClick={(e) => this.onSubmit(e, index)}>
+                      Submit
+                    </Button>
+                  </td>
+                  <td>
+                    {index + 1 === this.state.data.length ? (
+                      <>
+                        <Button onClick={() => this.onNewRow()}>Add </Button>
+                        {this.state.data.length > 1 && (
+                          <Button onClick={() => this.onDeleteRow(index)}>
+                            Delete{" "}
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      this.state.data.length > 1 && (
+                        <Button onClick={() => this.onDeleteRow(index)}>
+                          Delete{" "}
+                        </Button>
+                      )
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
+      </Container>
+    );
+  }
+}
+
+export default BidTable;
