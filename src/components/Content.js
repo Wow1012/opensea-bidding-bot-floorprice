@@ -38,23 +38,31 @@ function Content() {
 
   const [provider, setProvider] = React.useState();
   const [seaport, setSeaport] = React.useState();
-  const [accountAddress, setAccountAddress] = React.useState(
-    "0x60155080dfF547D9505281ECa95CC7b5619D4f98"
-  );
+  const [accountAddress, setAccountAddress] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [assetContractName, setAssetContractName] = React.useState("");
   const [assetContractDescription, setAssetContractDescription] =
     React.useState("");
 
   async function connectWallet() {
+    let web3;
     if (window.ethereum) {
       window.ethereum.enable();
+      web3 = new Web3(window.ethereum);
     } else {
+      toast.error(
+        "You need an Ethereum wallet to interact with this marketplace. Unlock your wallet, get MetaMask.io or Portis on desktop, or get Trust Wallet or Coinbase Wallet on mobile.",
+        { theme: "dark" }
+      );
       const errorMessage =
         "You need an Ethereum wallet to interact with this marketplace. Unlock your wallet, get MetaMask.io or Portis on desktop, or get Trust Wallet or Coinbase Wallet on mobile.";
       alert(errorMessage);
       throw new Error(errorMessage);
     }
+
+    web3.eth.getAccounts().then(async (addr) => {
+      setAccountAddress(addr[0]);
+    });
   }
 
   React.useEffect(() => {
@@ -113,10 +121,8 @@ function Content() {
         if (index == 1) setOfferingPrice2nd(buyOrderArray);
         if (index == 2) setOfferingPrice3rd(buyOrderArray);
         if (index >= 3) return;
-        console.log(buyOrderArray);
       });
     } catch (err) {
-      console.log(err);
       toast.error("ERROR. Check Contract Address and TokenID", {
         position: "top-right",
         autoClose: 5000,
@@ -127,14 +133,6 @@ function Content() {
         progress: undefined,
       });
     }
-
-    // const { orders, count } = await seaport.api.getOrders({
-    //   asset_contract_address: formData.contractaddress,
-    //   token_id: formData.tokenid,
-    //   side: OrderSide.Buy,
-    // });
-
-    // console.log(orders);
   };
 
   const onSubmit = async () => {
