@@ -15,6 +15,8 @@ import "./Content.scss";
 import * as Web3 from "web3";
 import { OpenSeaPort, Network } from "opensea-js";
 import { OrderSide } from "opensea-js/lib/types";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Content() {
   const [formData, setFormData] = React.useState({
@@ -73,20 +75,59 @@ function Content() {
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const onSubmit = async (e) => {
+  const onShow = async (e) => {
     e.preventDefault();
-    console.log(formData);
 
-    const asset = await seaport.api.getAsset({
-      tokenAddress: formData.contractaddress,
-      tokenId: formData.tokenid,
-    });
+    try {
+      const asset = await seaport.api.getAsset({
+        tokenAddress: formData.contractaddress,
+        tokenId: formData.tokenid,
+      });
 
-    console.log(asset);
+      console.log(asset);
 
-    setImageUrl(asset.imageUrl);
-    setAssetContractName(asset.assetContract.name);
-    setAssetContractDescription(asset.assetContract.description);
+      //Set Preview
+      setImageUrl(asset.imageUrl);
+      setAssetContractName(asset.assetContract.name);
+      setAssetContractDescription(asset.assetContract.description);
+
+      //Set Prices
+      setOfferingPrice1st(0);
+      setOfferingPrice2nd(0);
+      setOfferingPrice3rd(0);
+
+      const buyOrders = asset.buyOrders;
+      var buyOrdersArray = [];
+
+      buyOrders.forEach((buyOrder) => {
+        let priceWETH = buyOrder.basePrice.div(Math.pow(10, 18)).toNumber();
+        buyOrdersArray.push(priceWETH);
+      });
+
+      buyOrdersArray.sort(function (a, b) {
+        return b - a;
+      });
+
+      buyOrdersArray.forEach((buyOrderArray, index) => {
+        if (index == 0) setOfferingPrice1st(buyOrderArray);
+        if (index == 1) setOfferingPrice2nd(buyOrderArray);
+        if (index == 2) setOfferingPrice3rd(buyOrderArray);
+        if (index >= 3) return;
+        console.log(buyOrderArray);
+      });
+    } catch (err) {
+      console.log(err);
+      toast.error("ERROR. Check Contract Address and TokenID", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
+
     // const { orders, count } = await seaport.api.getOrders({
     //   asset_contract_address: formData.contractaddress,
     //   token_id: formData.tokenid,
@@ -94,18 +135,23 @@ function Content() {
     // });
 
     // console.log(orders);
+  };
 
-    // const offer = await seaport.createBuyOrder({
-    //   asset: {
-    //     tokenId: formData.tokenid,
-    //     tokenAddress: formData.contractaddress,
-    //   },
-    //   accountAddress,
-    //   // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
-    //   startAmount: 0.0001,
-    // });
-
-    // console.log(offer);
+  const onSubmit = async () => {
+    try {
+      const offer = await seaport.createBuyOrder({
+        asset: {
+          tokenId: formData.tokenid,
+          tokenAddress: formData.contractaddress,
+        },
+        accountAddress,
+        // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+        startAmount: 0.0001,
+        expirationTime: Math.round(Date.now() / 1000 + 60 * 60 * 24), // One day from now
+      });
+    } catch (err) {
+      toast.error(err.toString(), { theme: "dark" });
+    }
   };
 
   return (
@@ -116,10 +162,10 @@ function Content() {
         </Col>
         <Col xs={6} md={8}>
           <Row>
-            <h2>{assetContractName}</h2>
+            <h3>{assetContractName}</h3>
           </Row>
           <Row>
-            <h4>{assetContractDescription}</h4>
+            <h5>{assetContractDescription}</h5>
           </Row>
         </Col>
       </Row>
@@ -164,6 +210,10 @@ function Content() {
           </tr>
         </tbody>
       </Table>
+
+      <Button variant="primary" onClick={onShow}>
+        Show
+      </Button>
 
       <Form className="Content-Form">
         <Row className="mb-3">
@@ -263,6 +313,17 @@ function Content() {
           Submit
         </Button>
       </Form>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </Container>
   );
 }
