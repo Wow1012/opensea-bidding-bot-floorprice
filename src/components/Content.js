@@ -8,6 +8,8 @@ import {
   Row,
   Col,
   Button,
+  Image,
+  Badge,
 } from "react-bootstrap";
 import "./Content.scss";
 import * as Web3 from "web3";
@@ -37,6 +39,10 @@ function Content() {
   const [accountAddress, setAccountAddress] = React.useState(
     "0x60155080dfF547D9505281ECa95CC7b5619D4f98"
   );
+  const [imageUrl, setImageUrl] = React.useState("");
+  const [assetContractName, setAssetContractName] = React.useState("");
+  const [assetContractDescription, setAssetContractDescription] =
+    React.useState("");
 
   async function connectWallet() {
     if (window.ethereum) {
@@ -78,6 +84,9 @@ function Content() {
 
     console.log(asset);
 
+    setImageUrl(asset.imageUrl);
+    setAssetContractName(asset.assetContract.name);
+    setAssetContractDescription(asset.assetContract.description);
     // const { orders, count } = await seaport.api.getOrders({
     //   asset_contract_address: formData.contractaddress,
     //   token_id: formData.tokenid,
@@ -86,21 +95,34 @@ function Content() {
 
     // console.log(orders);
 
-    const offer = await seaport.createBuyOrder({
-      asset: {
-        tokenId: formData.tokenid,
-        tokenAddress: formData.contractaddress,
-      },
-      accountAddress,
-      // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
-      startAmount: 0.0001,
-    });
+    // const offer = await seaport.createBuyOrder({
+    //   asset: {
+    //     tokenId: formData.tokenid,
+    //     tokenAddress: formData.contractaddress,
+    //   },
+    //   accountAddress,
+    //   // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+    //   startAmount: 0.0001,
+    // });
 
-    console.log(offer);
+    // console.log(offer);
   };
 
   return (
     <Container>
+      <Row className="Content-Row">
+        <Col xs={6} md={4}>
+          <Image src={imageUrl} rounded />
+        </Col>
+        <Col xs={6} md={8}>
+          <Row>
+            <h2>{assetContractName}</h2>
+          </Row>
+          <Row>
+            <h4>{assetContractDescription}</h4>
+          </Row>
+        </Col>
+      </Row>
       <Form className="Content-Form">
         <Form.Label htmlFor="basic-url">OpenSea Listing</Form.Label>
         <InputGroup className="mb-3">
