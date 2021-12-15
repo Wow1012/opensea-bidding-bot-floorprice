@@ -27,6 +27,7 @@ class BidTable extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      intervalTime: 3000,
       seaport: "",
       accountAddress: "",
       contractAddress: "",
@@ -186,7 +187,8 @@ class BidTable extends React.Component {
     });
   };
 
-  sendOffer = async (index) => {
+  sendOffer1 = async (index) => {
+    // Offer 1
     try {
       const offer = await this.state.seaport.createBuyOrder({
         asset: {
@@ -201,13 +203,73 @@ class BidTable extends React.Component {
             60 * 60 * this.state.data[index].formData.duration1
         ), // One day from now
       });
+
+      toast.success(`Offer ${index + 1} - 1 : Success`, {
+        theme: "dark",
+      });
     } catch (err) {
-      toast.error(err.toString(), { theme: "dark" });
+      toast.error(`Offer ${index + 1} - 1 : ${err.toString()}`, {
+        theme: "dark",
+      });
     }
   };
 
-  onSubmit = async (e, index) => {
-    e.preventDefault();
+  sendOffer2 = async (index) => {
+    // Offer 2
+    try {
+      const offer = await this.state.seaport.createBuyOrder({
+        asset: {
+          tokenId: this.state.tokenid,
+          tokenAddress: this.state.contractAddress,
+        },
+        accountAddress: this.state.accountAddress,
+        // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+        startAmount: this.state.data[index].formData.myofferprice2,
+        expirationTime: Math.round(
+          Date.now() / 1000 +
+            60 * 60 * this.state.data[index].formData.duration2
+        ), // One day from now
+      });
+    } catch (err) {
+      toast.error(`Offer ${index + 1} - 2 : ${err.toString()}`, {
+        theme: "dark",
+      });
+    }
+  };
+
+  sendOffer3 = async (index) => {
+    // Offer 3
+    try {
+      const offer = await this.state.seaport.createBuyOrder({
+        asset: {
+          tokenId: this.state.tokenid,
+          tokenAddress: this.state.contractAddress,
+        },
+        accountAddress: this.state.accountAddress,
+        // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
+        startAmount: this.state.data[index].formData.myofferprice3,
+        expirationTime: Math.round(
+          Date.now() / 1000 +
+            60 * 60 * this.state.data[index].formData.duration3
+        ), // One day from now
+      });
+    } catch (err) {
+      toast.error(`Offer ${index + 1} - 3 : ${err.toString()}`, {
+        theme: "dark",
+      });
+    }
+  };
+  sendOffer = async (index) => {
+    await this.sendOffer1(index);
+    await setTimeout(() => {
+      this.sendOffer2(index);
+    }, this.state.intervalTime * 1);
+    await setTimeout(() => {
+      this.sendOffer3(index);
+    }, this.state.intervalTime * 2);
+  };
+
+  onSubmit = async (index) => {
     console.log(this.state.data[index]);
 
     await this.setContractAddressTokenId(this.state.data[index].listUrl);
@@ -227,6 +289,14 @@ class BidTable extends React.Component {
       console.log(err);
       toast.error("Check OpenSea Listing", { theme: "dark" });
     }
+  };
+
+  onSubmitAll = async () => {
+    this.state.data.forEach(async (data, index) => {
+      await setTimeout(() => {
+        this.onSubmit(index);
+      }, this.state.intervalTime * 3 * index);
+    });
   };
 
   connectWallet = () => {
@@ -281,7 +351,7 @@ class BidTable extends React.Component {
               <th>Duration</th>
               <th>My Offer Price 3rd</th>
               <th>Duration</th>
-              <th>Submit</th>
+              <th></th>
               <th></th>
             </tr>
           </thead>
@@ -347,7 +417,7 @@ class BidTable extends React.Component {
                     />
                   </td>
                   <td>
-                    <Button onClick={(e) => this.onSubmit(e, index)}>
+                    <Button onClick={(e) => this.onSubmit(index)}>
                       Submit
                     </Button>
                   </td>
@@ -374,6 +444,9 @@ class BidTable extends React.Component {
             })}
           </tbody>
         </Table>
+        <Button style={{ float: "right" }} onClick={this.onSubmitAll}>
+          Submit All
+        </Button>
         <ToastContainer
           position="top-right"
           autoClose={5000}
