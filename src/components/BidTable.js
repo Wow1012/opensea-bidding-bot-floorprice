@@ -3,6 +3,7 @@ import React from "react";
 //import Web3, OpenSea
 import * as Web3 from "web3";
 import { OpenSeaPort, Network } from "opensea-js";
+import HDWalletProvider from "@truffle/hdwallet-provider";
 
 //import Component
 import {
@@ -23,13 +24,18 @@ import "react-toastify/dist/ReactToastify.css";
 //import CSS
 import "./BidTable.scss";
 
+const PRIVATE_KEY = process.env.REACT_APP_PRIVATE_KEY;
+const WALLET_ADDRESS = process.env.REACT_APP_WALLET_ADDRESS;
+const PROVIDER_OR_URL = process.env.REACT_APP_PROVIDER_OR_URL;
+const API_KEY = process.env.REACT_APP_API_KEY;
+
 class BidTable extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       intervalTime: 3000,
       seaport: "",
-      accountAddress: "",
+      accountAddress: WALLET_ADDRESS,
       contractAddress: "",
       tokenId: "",
       data: [
@@ -176,9 +182,9 @@ class BidTable extends React.Component {
     });
 
     offerPricesArray.forEach((offerPrice, i) => {
-      if (i == 0) temp[index].offeringPrice1st = offerPrice;
-      if (i == 1) temp[index].offeringPrice2nd = offerPrice;
-      if (i == 2) temp[index].offeringPrice3rd = offerPrice;
+      if (i == 0) temp[index].offeringPrice1st = offerPrice.toFixed(5);
+      if (i == 1) temp[index].offeringPrice2nd = offerPrice.toFixed(5);
+      if (i == 2) temp[index].offeringPrice3rd = offerPrice.toFixed(5);
       if (i >= 3) return;
     });
 
@@ -204,7 +210,7 @@ class BidTable extends React.Component {
         ), // One day from now
       });
 
-      toast.success(`Offer ${index + 1} - 1 : Success`, {
+      toast.success(`Offer ${index + 1} - 1 : Bid Successfully`, {
         theme: "dark",
       });
     } catch (err) {
@@ -230,6 +236,10 @@ class BidTable extends React.Component {
             60 * 60 * this.state.data[index].formData.duration2
         ), // One day from now
       });
+
+      toast.success(`Offer ${index + 1} - 2 : Bid Successfully`, {
+        theme: "dark",
+      });
     } catch (err) {
       toast.error(`Offer ${index + 1} - 2 : ${err.toString()}`, {
         theme: "dark",
@@ -252,6 +262,10 @@ class BidTable extends React.Component {
           Date.now() / 1000 +
             60 * 60 * this.state.data[index].formData.duration3
         ), // One day from now
+      });
+
+      toast.success(`Offer ${index + 1} - 3 : Bid Successfully`, {
+        theme: "dark",
       });
     } catch (err) {
       toast.error(`Offer ${index + 1} - 3 : ${err.toString()}`, {
@@ -316,12 +330,15 @@ class BidTable extends React.Component {
   };
 
   createSeaPort = () => {
-    const provider = new Web3.providers.HttpProvider(
-      "https://mainnet.infura.io"
-    );
+    // const provider = new Web3.providers.HttpProvider(
+    //   "https://mainnet.infura.io/v3/b628b615b18a4736b508c45cf641bbeb"
+    // );
+
+    let provider = new HDWalletProvider(PRIVATE_KEY, PROVIDER_OR_URL);
+
     const seaport = new OpenSeaPort(provider, {
       networkName: Network.Main,
-      apiKey: "",
+      apiKey: API_KEY,
     });
 
     this.setState({ seaport: seaport });
@@ -329,7 +346,7 @@ class BidTable extends React.Component {
 
   componentDidMount() {
     this.createSeaPort();
-    this.connectWallet();
+    // this.connectWallet();
   }
 
   render() {
@@ -339,18 +356,18 @@ class BidTable extends React.Component {
           <thead>
             <tr>
               <th width="30%">OpenSea Listing</th>
-              <th>Title</th>
-              <th>Buy Price 1st</th>
-              <th>Buy Price 2nd</th>
+              <th width="*">Title</th>
+              <th>Listing Price 1st</th>
+              <th>Listing Price 2nd</th>
               <th>Offering Price 1st</th>
               <th>Offering Price 2nd</th>
               <th>Offering Price 3rd</th>
-              <th>My Offer Price 1st</th>
-              <th>Duration</th>
-              <th>My Offer Price 2nd</th>
-              <th>Duration</th>
-              <th>My Offer Price 3rd</th>
-              <th>Duration</th>
+              <th>My Offering Price 1st</th>
+              <th>During (hours)</th>
+              <th>My Offering Price 2nd</th>
+              <th>During (hours)</th>
+              <th>My Offering Price 3rd</th>
+              <th>During (hours)</th>
               <th></th>
               <th></th>
             </tr>
@@ -359,7 +376,7 @@ class BidTable extends React.Component {
             {this.state.data.map((item, index) => {
               return (
                 <tr background-color="#2c3034" key={index}>
-                  <td word-break="all" width="30%">
+                  <td word-break="all" width="*">
                     <Form.Control
                       as="textarea"
                       value={item.listUrl}
