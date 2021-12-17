@@ -4,6 +4,8 @@ import React from "react";
 import * as Web3 from "web3";
 import { OpenSeaPort, Network } from "opensea-js";
 import HDWalletProvider from "@truffle/hdwallet-provider";
+import { OrderSide } from "opensea-js/lib/types";
+import { ethers } from "ethers";
 
 //import Component
 import {
@@ -41,12 +43,16 @@ class BidTable extends React.Component {
       data: [
         {
           title: "",
-          listUrl: "",
+          listUrl:
+            "https://opensea.io/assets/0x60e4d786628fea6478f785a6d7e704777c86a7c6/15866",
           nowPrice1st: 0,
           nowPrice2nd: 0,
           offeringPrice1st: 0,
           offeringPrice2nd: 0,
           offeringPrice3rd: 0,
+          saledPrice1st: 0,
+          saledPrice2nd: 0,
+          saledPrice3rd: 0,
           formData: {
             myofferprice1: 0,
             duration1: 0,
@@ -84,6 +90,9 @@ class BidTable extends React.Component {
       offeringPrice1st: 0,
       offeringPrice2nd: 0,
       offeringPrice3rd: 0,
+      saledPrice1st: 0,
+      saledPrice2nd: 0,
+      saledPrice3rd: 0,
       formData: {
         myofferprice1: 0,
         duration1: 0,
@@ -144,9 +153,9 @@ class BidTable extends React.Component {
       offerPricesArray.push(priceWETH);
     });
 
-    offerPricesArray.sort(function (a, b) {
-      return a - b;
-    });
+    // offerPricesArray.sort(function (a, b) {
+    //   return a - b;
+    // });
 
     offerPricesArray.forEach((offerPrice, i) => {
       if (i == 0) temp[index].nowPrice1st = offerPrice;
@@ -177,9 +186,9 @@ class BidTable extends React.Component {
       offerPricesArray.push(priceWETH);
     });
 
-    offerPricesArray.sort(function (a, b) {
-      return b - a;
-    });
+    // offerPricesArray.sort(function (a, b) {
+    //   return b - a;
+    // });
 
     offerPricesArray.forEach((offerPrice, i) => {
       if (i == 0) temp[index].offeringPrice1st = offerPrice.toFixed(5);
@@ -192,7 +201,6 @@ class BidTable extends React.Component {
       data: temp,
     });
   };
-
   sendOffer1 = async (index) => {
     // Offer 1
     try {
@@ -283,9 +291,84 @@ class BidTable extends React.Component {
     }, this.state.intervalTime * 2);
   };
 
-  onSubmit = async (index) => {
-    console.log(this.state.data[index]);
+  setSaledPrice = async (lastSale, numSales, index) => {
+    let temp;
+    temp = this.state.data;
+    temp[index].saledPrice1st = 0;
+    temp[index].saledPrice2nd = 0;
+    temp[index].saledPrice3rd = 0;
 
+    if (lastSale)
+      temp[index].saledPrice1st = Web3.utils.fromWei(
+        lastSale.totalPrice,
+        "ether"
+      );
+
+    console.log(numSales);
+    this.setState({
+      data: temp,
+    });
+  };
+
+  onGetData = async (index) => {
+    await this.setContractAddressTokenId(this.state.data[index].listUrl);
+
+    try {
+      //LAST METHOD - FAST SPEED
+
+      // const asset = await this.state.seaport.api.getAsset({
+      //   tokenAddress: this.state.contractAddress,
+      //   tokenId: this.state.tokenid,
+      // });
+      // console.log(asset);
+
+      // await this.setTitle(asset.assetContract.name, index);
+      // await this.setOfferPrice(asset.buyOrders, index);
+      // await this.setBuyPrice(asset.sellOrders, index);
+
+      //NEW METHOD - SLOW SPEED
+
+      // Set Title
+      await this.state.seaport.api
+        .getAsset({
+          tokenAddress: this.state.contractAddress,
+          tokenId: this.state.tokenid,
+        })
+        .then(async (asset) => {
+          await this.setTitle(asset.assetContract.name, index);
+          console.log(asset);
+
+          await this.setSaledPrice(asset.lastSale, asset.numSales, index);
+        });
+
+      // Set Listing Price
+      await this.state.seaport.api
+        .getOrders({
+          asset_contract_address: this.state.contractAddress,
+          token_id: this.state.tokenid,
+          side: OrderSide.Sell,
+        })
+        .then(async (sellOrders, count) => {
+          await this.setBuyPrice(sellOrders.orders, index);
+        });
+
+      // Set Offer Price
+      await this.state.seaport.api
+        .getOrders({
+          asset_contract_address: this.state.contractAddress,
+          token_id: this.state.tokenid,
+          side: OrderSide.Buy,
+        })
+        .then(async (buyOrders, count) => {
+          await this.setOfferPrice(buyOrders.orders, index);
+        });
+    } catch (err) {
+      console.log(err);
+      toast.error("Check OpenSea Listing", { theme: "dark" });
+    }
+  };
+
+  onSubmit = async (index) => {
     await this.setContractAddressTokenId(this.state.data[index].listUrl);
 
     try {
@@ -295,9 +378,6 @@ class BidTable extends React.Component {
       });
       console.log(asset);
 
-      await this.setTitle(asset.assetContract.name, index);
-      await this.setOfferPrice(asset.buyOrders, index);
-      await this.setBuyPrice(asset.sellOrders, index);
       await this.sendOffer(index);
     } catch (err) {
       console.log(err);
@@ -362,6 +442,9 @@ class BidTable extends React.Component {
               <th>Offering Price 1st</th>
               <th>Offering Price 2nd</th>
               <th>Offering Price 3rd</th>
+              <th>Sale Price 1st</th>
+              <th>Sale Price 2nd</th>
+              <th>Sale Price 3rd</th>
               <th>My Offering Price 1st</th>
               <th>During (hours)</th>
               <th>My Offering Price 2nd</th>
@@ -383,6 +466,9 @@ class BidTable extends React.Component {
                       rows={3}
                       name="listUrl"
                       onChange={(e) => this.onHandleChange(e, index)}
+                      onKeyDown={(e) => {
+                        if (e.keyCode == 13) this.onGetData(index);
+                      }}
                     />
                   </td>
                   <td width="10%">{item.title}</td>
@@ -391,6 +477,9 @@ class BidTable extends React.Component {
                   <td>{item.offeringPrice1st}</td>
                   <td>{item.offeringPrice2nd}</td>
                   <td>{item.offeringPrice3rd}</td>
+                  <td>{item.saledPrice1st}</td>
+                  <td>{item.saledPrice2nd}</td>
+                  <td>{item.saledPrice3rd}</td>
                   <td>
                     <Form.Control
                       value={item.formData.myofferprice1}
