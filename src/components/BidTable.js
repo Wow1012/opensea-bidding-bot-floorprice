@@ -6,6 +6,8 @@ import { OpenSeaPort, Network } from "opensea-js";
 import HDWalletProvider from "@truffle/hdwallet-provider";
 import { OrderSide } from "opensea-js/lib/types";
 import { ethers } from "ethers";
+import axios from "axios";
+import { parse, stringify } from "flatted/cjs";
 
 //import Component
 import {
@@ -53,6 +55,7 @@ class BidTable extends React.Component {
           saledPrice1st: 0,
           saledPrice2nd: 0,
           saledPrice3rd: 0,
+          schemaName: "ERC721",
           formData: {
             myofferprice1: 0,
             duration1: 0,
@@ -76,6 +79,8 @@ class BidTable extends React.Component {
     }
     data[index] = temp;
     this.setState({ data: data });
+
+    this.onSaveData();
   };
 
   onNewRow = () => {
@@ -93,6 +98,7 @@ class BidTable extends React.Component {
       saledPrice1st: 0,
       saledPrice2nd: 0,
       saledPrice3rd: 0,
+      schemaName: "ERC721",
       formData: {
         myofferprice1: 0,
         duration1: 0,
@@ -105,6 +111,8 @@ class BidTable extends React.Component {
     this.setState({
       data: temp,
     });
+
+    this.onSaveData();
   };
 
   onDeleteRow = (index) => {
@@ -113,6 +121,8 @@ class BidTable extends React.Component {
     }
     let temp = this.state.data.filter((item, i) => i !== index);
     this.setState({ data: temp });
+
+    this.onSaveData();
   };
 
   setContractAddressTokenId = (listURL) => {
@@ -131,6 +141,15 @@ class BidTable extends React.Component {
     let temp;
     temp = this.state.data;
     temp[index].title = title;
+    this.setState({
+      data: temp,
+    });
+  };
+
+  setSchemaName = (schemaName, index) => {
+    let temp;
+    temp = this.state.data;
+    temp[index].schemaName = schemaName;
     this.setState({
       data: temp,
     });
@@ -208,6 +227,7 @@ class BidTable extends React.Component {
         asset: {
           tokenId: this.state.tokenid,
           tokenAddress: this.state.contractAddress,
+          schemaName: this.state.data[index].schemaName,
         },
         accountAddress: this.state.accountAddress,
         // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
@@ -235,6 +255,7 @@ class BidTable extends React.Component {
         asset: {
           tokenId: this.state.tokenid,
           tokenAddress: this.state.contractAddress,
+          schemaName: this.state.data[index].schemaName,
         },
         accountAddress: this.state.accountAddress,
         // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
@@ -262,6 +283,7 @@ class BidTable extends React.Component {
         asset: {
           tokenId: this.state.tokenid,
           tokenAddress: this.state.contractAddress,
+          schemaName: this.state.data[index].schemaName,
         },
         accountAddress: this.state.accountAddress,
         // Value of the offer, in units of the payment token (or wrapped ETH if none is specified):
@@ -316,26 +338,29 @@ class BidTable extends React.Component {
     try {
       //LAST METHOD - FAST SPEED
 
-      // const asset = await this.state.seaport.api.getAsset({
-      //   tokenAddress: this.state.contractAddress,
-      //   tokenId: this.state.tokenid,
-      // });
-      // console.log(asset);
+      const asset = await this.state.seaport.api.getAsset({
+        tokenAddress: this.state.contractAddress,
+        tokenId: this.state.tokenid,
+      });
+      console.log(asset);
 
-      // await this.setTitle(asset.assetContract.name, index);
-      // await this.setOfferPrice(asset.buyOrders, index);
-      // await this.setBuyPrice(asset.sellOrders, index);
+      await this.setTitle(asset.name, index);
+      await this.setSchemaName(asset.assetContract.schemaName, index);
+      await this.setOfferPrice(asset.buyOrders, index);
+      await this.setBuyPrice(asset.sellOrders, index);
+      await this.setSaledPrice(asset.lastSale, asset.numSales, index);
 
       //NEW METHOD - SLOW SPEED
 
-      // Set Title
-      await this.state.seaport.api
+      // Set Title, SchemaName
+      /*await this.state.seaport.api
         .getAsset({
           tokenAddress: this.state.contractAddress,
           tokenId: this.state.tokenid,
         })
         .then(async (asset) => {
-          await this.setTitle(asset.assetContract.name, index);
+          await this.setTitle(asset.name, index);
+          await this.setSchemaName(asset.assetContract.schemaName, index);
           console.log(asset);
 
           await this.setSaledPrice(asset.lastSale, asset.numSales, index);
@@ -361,11 +386,13 @@ class BidTable extends React.Component {
         })
         .then(async (buyOrders, count) => {
           await this.setOfferPrice(buyOrders.orders, index);
-        });
+        });*/
     } catch (err) {
       console.log(err);
       toast.error("Check OpenSea Listing", { theme: "dark" });
     }
+
+    this.onSaveData();
   };
 
   onSubmit = async (index) => {
@@ -383,6 +410,8 @@ class BidTable extends React.Component {
       console.log(err);
       toast.error("Check OpenSea Listing", { theme: "dark" });
     }
+
+    this.onSaveData();
   };
 
   onSubmitAll = async () => {
@@ -391,6 +420,8 @@ class BidTable extends React.Component {
         this.onSubmit(index);
       }, this.state.intervalTime * 3 * index);
     });
+
+    this.onSaveData();
   };
 
   connectWallet = () => {
@@ -427,6 +458,13 @@ class BidTable extends React.Component {
   componentDidMount() {
     this.createSeaPort();
     // this.connectWallet();
+    axios.get("http://localhost:5000/read").then((res) => {
+      this.setState({ data: res.data });
+    });
+  }
+
+  onSaveData() {
+    axios.post("http://localhost:5000/write", this.state.data);
   }
 
   render() {
