@@ -3,10 +3,11 @@ import "./Navbar.scss";
 
 function Navbars() {
   return (
-    <Navbar bg="dark" variant="dark">
+    <Navbar bg="primary" variant="dark">
       <Container>
         <Navbar.Brand className="Nabvar-Brand">
-          OpenSea Bidding Bot
+          <img src="opensea.svg" />
+          &nbsp; OpenSea Buying Bot v1.0.1
         </Navbar.Brand>
       </Container>
     </Navbar>
